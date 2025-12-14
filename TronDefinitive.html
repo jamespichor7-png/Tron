@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Light Cycle Duel: GRIND PROTOCOL ACTIVE</title>
+    
+    <style>
+        body { 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            background-color: #0d0d1a;
+            color: #00FFFF;
+            font-family: 'Consolas', monospace; 
+        }
+        
+        #game-container {
+            border: 4px solid #00FFFF;
+            box-shadow: 0 0 30px #00FFFF;
+            background-color: #000008;
+            margin-top: 10px;
+            /* Container for positioning the menu button */
+            position: relative; 
+        }
+
+        #mode-select {
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 10px;
+            margin-bottom: 20px;
+            max-width: 1200px;
+        }
+
+        .mode-btn {
+            padding: 10px 12px;
+            font-size: 14px;
+            background: #2a0050; 
+            color: #00FFFF;
+            border: 2px solid #FF00FF;
+            cursor: pointer;
+            box-shadow: 0 0 5px #FF00FF;
+            transition: background 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+        }
+        .p-vs-ai-btn {
+            background: #502a00;
+            border-color: #FFC000;
+            color: #FFC000;
+        }
+        .p-vs-ai-btn:hover {
+            background: #704a00;
+            box-shadow: 0 0 15px #FFC000;
+        }
+        .ai-btn {
+            background: #004d40;
+            border-color: #00FFC0;
+            color: #00FFC0;
+        }
+        .ai-btn:hover {
+            background: #00695c;
+            box-shadow: 0 0 15px #00FFC0;
+        }
+        .mode-btn:hover {
+            background: #4a0070;
+            box-shadow: 0 0 15px #00FFFF;
+        }
+
+
+        /* --- Screens: Set size to 100% of parent game-container --- */
+        #start-screen, #end-screen, #multiplayer-info {
+            position: absolute;
+            width: 100%; /* Fix: Use 100% of game-container width */
+            height: 100%; /* Fix: Use 100% of game-container height */
+            top: 0; /* Fix: Adjust positioning */
+            left: 0; /* Fix: Adjust positioning */
+            transform: none; /* Fix: Remove translate */
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            text-align: center;
+            border: none; /* Removed redundant border here */
+            box-shadow: none; /* Removed redundant shadow here */
+        }
+        
+        h1 { color: #FF00FF; text-shadow: 0 0 10px #FF00FF; }
+        
+        #end-screen button, #multiplayer-info button {
+            background: #FF00FF;
+            color: #FFF;
+            padding: 10px 20px;
+            border: 2px solid #FFF;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #FF00FF; 
+            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .controls span { font-weight: bold; color: #FF00FF; }
+
+        #multiplayer-info {
+            display: none;
+            font-size: 1.2em;
+            color: #FF7700;
+        }
+
+        /* --- New Menu Button Style --- */
+        #menu-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            font-size: 12px;
+            background: #500000; 
+            color: #FF4444;
+            border: 2px solid #FF0000;
+            cursor: pointer;
+            z-index: 200; 
+            display: none; 
+        }
+        #menu-btn:hover {
+            background: #700000;
+            box-shadow: 0 0 10px #FF0000;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="multiplayer-info">
+        <h1>ONLINE MULTIPLAYER MODE</h1>
+        <p>This mode requires a server (e.g., at <code>ws://localhost:8080</code>).</p>
+        <p>The client architecture is ready for any team size selected.</p>
+        <button onclick="window.location.reload()">Return to Menu</button>
+    </div>
+
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <button id="menu-btn" onclick="goToMenu()">BACK TO MENU (ESC)</button>
+
+        <div id="start-screen">
+            <h1>LIGHT CYCLE DUEL: GRIND PROTOCOL ACTIVE</h1>
+            <p>Select Game Mode and Team Size:</p>
+            
+            <div id="mode-select">
+                <button class="mode-btn p-vs-ai-btn" onclick="initGame('P_VS_AI', 1)">👤 1v1 P vs. AI</button>
+                <button class="mode-btn p-vs-ai-btn" onclick="initGame('P_VS_AI', 2)">👥 2v2 P vs. AI</button> 
+                <button class="mode-btn p-vs-ai-btn" onclick="initGame('P_VS_AI', 3)">👥 3v3 P vs. AI</button>
+                <button class="mode-btn p-vs-ai-btn" onclick="initGame('P_VS_AI', 4)">👥 4v4 P vs. AI</button>
+                
+                <button class="mode-btn" onclick="initGame('LOCAL_DUEL', 1)">👯 1v1 Local</button>
+                <button class="mode-btn" onclick="initGame('LOCAL_DUEL', 2)">👯 2v2 Local</button>
+                <button class="mode-btn" onclick="initGame('LOCAL_DUEL', 3)">👯 3v3 Local</button>
+                <button class="mode-btn" onclick="initGame('LOCAL_DUEL', 4)">👯 4v4 Local</button>
+
+                <button class="mode-btn ai-btn" onclick="initGame('AI_BATTLE', 1)">🤖 1v1 AI</button>
+                <button class="mode-btn ai-btn" onclick="initGame('AI_BATTLE', 2)">🤖 2v2 AI</button>
+                <button class="mode-btn ai-btn" onclick="initGame('AI_BATTLE', 3)">🤖 3v3 AI</button>
+                <button class="mode-btn ai-btn" onclick="initGame('AI_BATTLE', 4)">🤖 4v4 AI</button>
+            </div>
+
+            <div class="controls">
+                <h3>!! GRIND PROTOCOL ACTIVE (HARDER & LESS FORGIVING) !!</h3>
+                <p style="color:#FF0000; font-weight: bold;">1. TRAIL DEATH: Touching ANY trail/cycle results in instant elimination.</p>
+                <p style="color:#00FF00; font-weight: bold;">2. GRINDING: Riding onto a DEAD trail segment claims it as your own!</p>
+                <p>Player 1 (Team 1 - Red, Cycle 1): <span>W A S D</span></p>
+                <p>Player 2 (Team 1 or 2, Cycle 2/1): <span>ARROW KEYS</span></p>
+                <p><span>Press ESC or the 'Back to Menu' button to return.</span></p>
+            </div>
+            
+        </div>
+        
+        <div id="end-screen" style="display: none;">
+            <h1>TEAM VICTORY!</h1>
+            <p id="winner-message"></p>
+            <button id="restart-button">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME CONSTANTS ---
+        const GRID_SIZE = 60; 
+        const CELL_SIZE = 10; 
+        const CANVAS_SIZE = GRID_SIZE * CELL_SIZE;
+        const GAME_TICK_RATE = 100; // Time in milliseconds between game logic updates (10 moves per second)
+        const SERVER_URL = 'ws://localhost:8080';
+
+        // --- GAME MODES ---
+        const GAME_MODE = { P_VS_AI: 'P_VS_AI', LOCAL_DUEL: 'LOCAL_DUEL', AI_BATTLE: 'AI_BATTLE', ONLINE: 'ONLINE' };
+        let currentMode = null;
+        let teamSize = 1; 
+
+        // --- CORE STATE ---
+        let canvas, ctx;
+        let cycles = [];
+        let explosions = []; 
+        let isRunning = false;
+        let nextDirection = {}; 
+        let grid = []; 
+        let cycleIdToColorMap = {}; 
+        
+        // --- SOUND STATE ---
+        let audioContext;
+        let engineOscillator;
+        let engineGain;
+
+        // --- SMOOTHNESS VARIABLES ---
+        let lastUpdateTime = 0;
+        let gameLogicInterval; 
+
+        // --- CYCLE COLORS (Team 1 vs Team 2) ---
+        const TEAM_COLORS = {
+            1: ['#FF0000', '#FF4444', '#FF8888', '#FFBBBB'], 
+            2: ['#0000FF', '#4444FF', '#8888FF', '#BBBBFF'] 
+        };
+        const HUMAN_KEYS = [
+            { 'KeyW': 'UP', 'KeyA': 'LEFT', 'KeyS': 'DOWN', 'KeyD': 'RIGHT' }, 
+            { 'ArrowUp': 'UP', 'ArrowLeft': 'LEFT', 'ArrowDown': 'DOWN', 'ArrowRight': 'RIGHT' } 
+        ];
+        
+        // --- CACHED DOM ELEMENTS ---
+        let menuButton;
+        let startScreen;
+        let endScreen;
+
+        // --- INITIALIZATION ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const gameContainer = document.getElementById('game-container');
+            canvas = document.getElementById('game-canvas');
+            ctx = canvas.getContext('2d');
+            menuButton = document.getElementById('menu-btn');
+            startScreen = document.getElementById('start-screen');
+            endScreen = document.getElementById('end-screen');
+
+            // Set canvas size
+            canvas.width = CANVAS_SIZE;
+            canvas.height = CANVAS_SIZE;
+            gameContainer.style.width = CANVAS_SIZE + 'px';
+            gameContainer.style.height = CANVAS_SIZE + 'px';
+
+            document.getElementById('restart-button').addEventListener('click', () => {
+                if (currentMode === GAME_MODE.LOCAL_DUEL || currentMode === GAME_MODE.AI_BATTLE || currentMode === GAME_MODE.P_VS_AI) {
+                    startGame();
+                } else {
+                    window.location.reload(); 
+                }
+            });
+            window.addEventListener('keydown', handleKeyInput);
+            
+            // Initialize Audio Context on first user interaction
+            window.addEventListener('click', initAudioContext, { once: true });
+            window.addEventListener('keydown', initAudioContext, { once: true });
+
+            requestAnimationFrame(renderLoop);
+        });
+
+        // --- AUDIO LOGIC ---
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Initialize Engine Hum sound components
+                engineOscillator = audioContext.createOscillator();
+                engineOscillator.type = 'sawtooth';
+                engineOscillator.frequency.setValueAtTime(220, audioContext.currentTime); // A3 frequency
+                engineGain = audioContext.createGain();
+                engineGain.gain.setValueAtTime(0, audioContext.currentTime); // Start muted
+                
+                engineOscillator.connect(engineGain);
+                engineGain.connect(audioContext.destination);
+                engineOscillator.start();
+            }
+        }
+        
+        function playEngineHum() {
+            if (!audioContext || !engineGain) return;
+            
+            // Fade up the engine gain
+            engineGain.gain.cancelScheduledValues(audioContext.currentTime);
+            engineGain.gain.linearRampToValueAtTime(0.05, audioContext.currentTime + 0.5);
+        }
+
+        function stopEngineHum() {
+            if (!audioContext || !engineGain) return;
+            
+            // Fade down the engine gain
+            engineGain.gain.cancelScheduledValues(audioContext.currentTime);
+            engineGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
+        }
+
+        function playMoveSound() {
+            if (!audioContext) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.02, audioContext.currentTime);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.01); 
+        }
+
+        function playCrashSound() {
+            if (!audioContext) return;
+            
+            const crashDuration = 0.5;
+            
+            // Noise Burst (Static sound)
+            const bufferSize = audioContext.sampleRate * crashDuration;
+            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+            
+            const noise = audioContext.createBufferSource();
+            noise.buffer = buffer;
+            
+            const noiseGain = audioContext.createGain();
+            noiseGain.gain.setValueAtTime(0.2, audioContext.currentTime);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + crashDuration);
+            
+            noise.connect(noiseGain);
+            noiseGain.connect(audioContext.destination);
+            noise.start(audioContext.currentTime);
+        }
+        
+        // --- GAME FLOW LOGIC (Slightly modified to include sounds) ---
+
+        function initGame(mode, size) {
+            currentMode = mode;
+            teamSize = size;
+            startScreen.style.display = 'none';
+
+            if (mode === GAME_MODE.ONLINE) {
+                document.getElementById('multiplayer-info').style.display = 'flex';
+                connectToServer();
+                return;
+            }
+            
+            startGame();
+        }
+
+        function goToMenu() {
+            if (gameLogicInterval) {
+                clearInterval(gameLogicInterval);
+            }
+            stopEngineHum(); // Stop engine sound
+            isRunning = false;
+            menuButton.style.display = 'none';
+            endScreen.style.display = 'none';
+            startScreen.style.display = 'flex';
+        }
+
+        function startGame() {
+            endScreen.style.display = 'none';
+            startScreen.style.display = 'none'; 
+            menuButton.style.display = 'block'; 
+            resetGame();
+            isRunning = true;
+            
+            if (gameLogicInterval) clearInterval(gameLogicInterval);
+            
+            gameLogicInterval = setInterval(gameTick, GAME_TICK_RATE); 
+            playEngineHum(); // Start engine sound
+        }
+
+        // --- RESET GAME (Unchanged) ---
+        function resetGame() {
+            grid = [];
+            for (let i = 0; i < GRID_SIZE; i++) {
+                grid[i] = new Array(GRID_SIZE).fill(0); 
+            }
+            cycles = [];
+            explosions = []; 
+            nextDirection = {}; 
+            cycleIdToColorMap = {}; 
+
+            const spawnPoints = [
+                // Team 1 (Top-Left corner)
+                { x: 5, y: 5, dir: 'RIGHT' }, { x: 5, y: 15, dir: 'RIGHT' }, { x: 15, y: 5, dir: 'DOWN' }, { x: 15, y: 15, dir: 'DOWN' },
+                // Team 2 (Bottom-Right corner)
+                { x: GRID_SIZE - 6, y: GRID_SIZE - 6, dir: 'LEFT' }, { x: GRID_SIZE - 6, y: GRID_SIZE - 16, dir: 'LEFT' }, { x: GRID_SIZE - 16, y: GRID_SIZE - 6, dir: 'UP' }, { x: GRID_SIZE - 16, y: GRID_SIZE - 16, dir: 'UP' }
+            ];
+
+            let cycleIdCounter = 1;
+            let humanCount = 0; 
+            
+            for (let t = 1; t <= 2; t++) { 
+                for (let i = 0; i < teamSize; i++) {
+                    const spawnIndex = (t === 1) ? i : teamSize + i; 
+                    
+                    let isHuman = false;
+                    
+                    if (currentMode === GAME_MODE.LOCAL_DUEL) {
+                        isHuman = (t === 1 && i === 0) || (t === 2 && i === 0);
+                    } else if (currentMode === GAME_MODE.P_VS_AI) {
+                        if (humanCount === 0) {
+                            isHuman = true;
+                            humanCount++; 
+                        } else {
+                            isHuman = false;
+                        }
+                    } else if (currentMode === GAME_MODE.AI_BATTLE) {
+                        isHuman = false;
+                    }
+
+                    const spawn = spawnPoints[spawnIndex % spawnPoints.length];
+                    const cycleColor = TEAM_COLORS[t][i % TEAM_COLORS[t].length];
+                    const cycleId = cycleIdCounter++;
+
+                    const newCycle = {
+                        id: cycleId,
+                        teamId: t,
+                        color: cycleColor,
+                        x: spawn.x,
+                        y: spawn.y,
+                        dir: spawn.dir,
+                        isAlive: true,
+                        isHuman: isHuman,
+                        trail: [] 
+                    };
+                    cycles.push(newCycle);
+                    cycleIdToColorMap[cycleId] = cycleColor; 
+                    
+                    nextDirection[newCycle.id] = spawn.dir;
+                    grid[spawn.x][spawn.y] = newCycle.id;
+                }
+            }
+        }
+        
+        // --- AI LOGIC (Unchanged) ---
+        function isBlockingEnemyPath(aiX, aiY, enemyCycles) {
+            return enemyCycles.some(targetCycle => {
+                if (!targetCycle.isAlive) return false;
+                const dirX = targetCycle.dir === 'RIGHT' ? 1 : targetCycle.dir === 'LEFT' ? -1 : 0;
+                const dirY = targetCycle.dir === 'DOWN' ? 1 : targetCycle.dir === 'UP' ? -1 : 0;
+                const enemyNextX = targetCycle.x + dirX;
+                const enemyNextY = targetCycle.y + dirY;
+                return aiX === enemyNextX && aiY === enemyNextY;
+            });
+        }
+
+        function isHeadOnCollision(aiX, aiY, cycle, enemyCycles) {
+            return enemyCycles.some(targetCycle => {
+                if (!targetCycle.isAlive) return false;
+
+                const dirX = targetCycle.dir === 'RIGHT' ? 1 : targetCycle.dir === 'LEFT' ? -1 : 0;
+                const dirY = targetCycle.dir === 'DOWN' ? 1 : targetCycle.dir === 'UP' ? -1 : 0;
+                const enemyNextX = targetCycle.x + dirX;
+                const enemyNextY = targetCycle.y + dirY;
+
+                if (aiX === enemyNextX && aiY === enemyNextY) return true;
+                
+                if (aiX === targetCycle.x && aiY === targetCycle.y &&
+                    enemyNextX === cycle.x && enemyNextY === cycle.y) {
+                    return true;
+                }
+
+                return false;
+            });
+        }
+
+        function floodFill(startX, startY, cycleTeamId) {
+            let count = 0;
+            const queue = [{x: startX, y: startY}];
+            const visited = new Set();
+            
+            while (queue.length > 0 && count < 500) { 
+                const {x, y} = queue.shift();
+                const key = `${x},${y}`;
+
+                if (visited.has(key)) continue;
+                visited.add(key);
+
+                if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) continue;
+                
+                const occupant = grid[x][y];
+                if (occupant !== 0) {
+                    continue; 
+                }
+
+                count++;
+                queue.push({x: x + 1, y: y}, {x: x - 1, y: y}, {x: x, y: y + 1}, {x: x, y: y - 1});
+            }
+            return count;
+        }
+
+        function getAITurn(cycle) {
+            const directions = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
+            let possibleMoves = []; 
+            const enemies = cycles.filter(c => c.isAlive && c.teamId !== cycle.teamId);
+
+            if (enemies.length === 0) return cycle.dir;
+
+            for (const newDir of directions) {
+                if ((newDir === 'UP' && cycle.dir === 'DOWN') || (newDir === 'DOWN' && cycle.dir === 'UP') ||
+                    (newDir === 'LEFT' && cycle.dir === 'RIGHT') || (newDir === 'RIGHT' && cycle.dir === 'LEFT')) {
+                    continue;
+                }
+
+                let nextX = cycle.x, nextY = cycle.y;
+                switch (newDir) {
+                    case 'UP': nextY--; break;
+                    case 'DOWN': nextY++; break;
+                    case 'LEFT': nextX--; break;
+                    case 'RIGHT': nextX++; break;
+                }
+
+                if (isFatalCollision(nextX, nextY, cycle, true)) continue; 
+
+                if (isHeadOnCollision(nextX, nextY, cycle, enemies)) {
+                    continue; 
+                }
+
+                const openSpace = floodFill(nextX, nextY, cycle.teamId);
+                
+                let minEnemyDist = Infinity;
+                
+                enemies.forEach(enemy => {
+                    const dist = Math.hypot(nextX - enemy.x, nextY - enemy.y);
+                    minEnemyDist = Math.min(minEnemyDist, dist);
+                });
+
+                possibleMoves.push({
+                    dir: newDir,
+                    x: nextX,
+                    y: nextY,
+                    openSpace: openSpace,
+                    minEnemyDist: minEnemyDist,
+                    blocksAnyEnemy: isBlockingEnemyPath(nextX, nextY, enemies)
+                });
+            }
+
+            const trappingMoves = possibleMoves.filter(m => m.blocksAnyEnemy);
+
+            if (trappingMoves.length > 0) {
+                const bestTrap = trappingMoves.sort((a, b) => b.openSpace - a.openSpace)[0];
+                return bestTrap.dir;
+            }
+            
+            let containmentMoves = possibleMoves.slice();
+            
+            if (containmentMoves.length > 0) {
+                containmentMoves.sort((a, b) => a.minEnemyDist - b.minEnemyDist);
+
+                const closestMove = containmentMoves[0];
+                const safeThreshold = (GRID_SIZE * GRID_SIZE) * 0.05; 
+                
+                if (closestMove.openSpace > safeThreshold) { 
+                    if (Math.random() < 0.7) { 
+                        return closestMove.dir;
+                    }
+                }
+            }
+
+            if (possibleMoves.length > 0) {
+                const bestSafetyMove = possibleMoves.sort((a, b) => b.openSpace - a.openSpace)[0];
+                return bestSafetyMove.dir;
+            }
+
+            return cycle.dir; 
+        }
+
+        // --- EXPLOSION LOGIC (Unchanged) ---
+        function handleExplosion(x, y, color) {
+            const particleCount = 75;
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 2 + 1; 
+                
+                explosions.push({
+                    x: x * CELL_SIZE + CELL_SIZE / 2, 
+                    y: y * CELL_SIZE + CELL_SIZE / 2,
+                    vx: Math.cos(angle) * speed * 0.1, 
+                    vy: Math.sin(angle) * speed * 0.1,
+                    color: color,
+                    size: 3,
+                    lifetime: 15 
+                });
+            }
+        }
+
+        function updateExplosions(deltaTime) {
+            const frameFactor = deltaTime / 16.67; 
+            
+            for (let i = explosions.length - 1; i >= 0; i--) {
+                const p = explosions[i];
+                
+                p.x += p.vx * frameFactor * 3; 
+                p.y += p.vy * frameFactor * 3;
+                
+                p.lifetime -= frameFactor; 
+                p.size *= (1 - 0.05 * frameFactor); 
+                
+                p.vx *= (1 - 0.02 * frameFactor);
+                p.vy *= (1 - 0.02 * frameFactor);
+
+                if (p.lifetime <= 0 || p.size < 0.5) {
+                    explosions.splice(i, 1);
+                }
+            }
+        }
+
+        // --- GAME LOOP & COLLISIONS ---
+        
+        function isFatalCollision(x, y, cycle, checkAllOccupancy = true) {
+            if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return true;
+
+            const occupantId = grid[x][y];
+            if (occupantId === 0) return false; 
+
+            if (checkAllOccupancy) {
+                return true;
+            } else {
+                const occupantCycle = cycles.find(c => c.id === occupantId);
+                return occupantCycle && occupantCycle.isAlive;
+            }
+        }
+
+        function gameTick() {
+            if (!isRunning) return;
+
+            const potentialCollisions = [];
+
+            cycles.forEach(cycle => {
+                if (!cycle.isAlive) return;
+
+                let newDir = nextDirection[cycle.id] || cycle.dir; 
+                
+                if (!cycle.isHuman) {
+                    newDir = getAITurn(cycle);
+                    nextDirection[cycle.id] = newDir;
+                }
+
+                let newX = cycle.x;
+                let newY = cycle.y;
+
+                switch (newDir) {
+                    case 'UP': newY--; break;
+                    case 'DOWN': newY++; break;
+                    case 'LEFT': newX--; break;
+                    case 'RIGHT': newX++; break;
+                }
+                
+                potentialCollisions.push({
+                    cycle, 
+                    newX, 
+                    newY, 
+                    newDir, 
+                    collides: isFatalCollision(newX, newY, cycle, true)
+                });
+            });
+
+            const cyclesToMove = [];
+            const cyclesToDie = new Set();
+            let crashOccurred = false;
+            
+            potentialCollisions.forEach(p => {
+                if (p.collides) {
+                    cyclesToDie.add(p.cycle.id);
+                    crashOccurred = true;
+                } else {
+                    cyclesToMove.push(p);
+                }
+            });
+            
+            for (let i = 0; i < cyclesToMove.length; i++) {
+                const p1 = cyclesToMove[i];
+                if (cyclesToDie.has(p1.cycle.id)) continue; 
+
+                for (let j = i + 1; j < cyclesToMove.length; j++) {
+                    const p2 = cyclesToMove[j];
+                    if (cyclesToDie.has(p2.cycle.id)) continue; 
+
+                    if (p1.newX === p2.newX && p1.newY === p2.newY) {
+                        cyclesToDie.add(p1.cycle.id);
+                        cyclesToDie.add(p2.cycle.id);
+                        crashOccurred = true;
+                    }
+                    
+                    if (p1.newX === p2.cycle.x && p1.newY === p2.cycle.y &&
+                        p2.newX === p1.cycle.x && p2.newY === p1.cycle.y) {
+                        cyclesToDie.add(p1.cycle.id);
+                        cyclesToDie.add(p2.cycle.id);
+                        crashOccurred = true;
+                    }
+                }
+            }
+            
+            cycles.forEach(cycle => {
+                if (!cycle.isAlive) return;
+
+                if (cyclesToDie.has(cycle.id)) {
+                    handleExplosion(cycle.x, cycle.y, cycle.color); 
+                    cycle.isAlive = false;
+                } else {
+                    const potentialMove = potentialCollisions.find(p => p.cycle.id === cycle.id);
+                    if (potentialMove) {
+                        
+                        cycle.dir = potentialMove.newDir; 
+                        
+                        // GRINDING PROTOCOL: Claim the new spot
+                        grid[potentialMove.newX][potentialMove.newY] = cycle.id;
+                        
+                        cycle.x = potentialMove.newX;
+                        cycle.y = potentialMove.newY;
+
+                        if (cycle.isHuman) {
+                            delete nextDirection[cycle.id];
+                        }
+                    }
+                }
+            });
+            
+            if (crashOccurred) {
+                playCrashSound();
+            } else {
+                playMoveSound(); 
+            }
+
+            checkGameOver();
+        }
+
+        function checkGameOver() {
+            const aliveCyclesTeam1 = cycles.filter(c => c.isAlive && c.teamId === 1);
+            const aliveCyclesTeam2 = cycles.filter(c => c.isAlive && c.teamId === 2);
+            
+            if (aliveCyclesTeam1.length === 0 || aliveCyclesTeam2.length === 0) {
+                isRunning = false;
+                if (gameLogicInterval) clearInterval(gameLogicInterval);
+                stopEngineHum(); // Stop engine sound
+                menuButton.style.display = 'none'; 
+                
+                setTimeout(() => { 
+                    const winnerMessage = document.getElementById('winner-message');
+                    
+                    let winner = null;
+                    if (aliveCyclesTeam1.length > 0) {
+                        winner = 1;
+                    } else if (aliveCyclesTeam2.length > 0) {
+                        winner = 2;
+                    }
+
+                    if (winner) {
+                        const winnerColor = winner === 1 ? 'Red' : 'Blue';
+                        winnerMessage.innerHTML = `TEAM ${winner} (${winnerColor}) WINS!<br><span style="color:${TEAM_COLORS[winner][0]}; font-size: 36px;">VICTORY!</span>`;
+                    } else {
+                        winnerMessage.innerHTML = `TOTAL ANNIHILATION!<br><span style="color:#FF00FF; font-size: 36px;">DRAW!</span>`;
+                    }
+                    endScreen.style.display = 'flex';
+                }, 1000); 
+            }
+        }
+
+        // --- INPUT & RENDERING (Unchanged) ---
+        
+        function handleKeyInput(event) {
+            
+            if (event.code === 'Escape') {
+                if (isRunning) {
+                    goToMenu();
+                    event.preventDefault();
+                    return;
+                }
+            }
+
+            if (!isRunning || currentMode === GAME_MODE.ONLINE || currentMode === GAME_MODE.AI_BATTLE) {
+                if (HUMAN_KEYS[0][event.code] || HUMAN_KEYS[1][event.code]) {
+                    event.preventDefault();
+                }
+                return;
+            }
+            
+            let targetTeam = null;
+            let newDir = null;
+            
+            if (HUMAN_KEYS[0][event.code]) {
+                newDir = HUMAN_KEYS[0][event.code];
+                targetTeam = 1;
+            } else if (HUMAN_KEYS[1][event.code]) {
+                if (currentMode === GAME_MODE.LOCAL_DUEL) {
+                    newDir = HUMAN_KEYS[1][event.code];
+                    targetTeam = 2;
+                } else {
+                    event.preventDefault(); 
+                    return;
+                }
+            }
+            
+            if (newDir && targetTeam) {
+                const targetCycle = cycles.find(c => c.isHuman && c.teamId === targetTeam); 
+
+                if (targetCycle && targetCycle.isAlive) {
+                    if ( (newDir === 'UP' && targetCycle.dir !== 'DOWN') ||
+                         (newDir === 'DOWN' && targetCycle.dir !== 'UP') ||
+                         (newDir === 'LEFT' && targetCycle.dir !== 'RIGHT') ||
+                         (newDir === 'RIGHT' && targetCycle.dir !== 'LEFT') ) 
+                    {
+                        nextDirection[targetCycle.id] = newDir; 
+                    }
+                }
+                event.preventDefault(); 
+            }
+        }
+
+        function renderLoop(timestamp) {
+            const deltaTime = timestamp - lastUpdateTime;
+            lastUpdateTime = timestamp;
+
+            if (isRunning || explosions.length > 0) {
+                updateExplosions(deltaTime);
+                drawGrid();
+            }
+
+            requestAnimationFrame(renderLoop);
+        }
+        
+        function drawGrid() {
+            ctx.fillStyle = '#000008';
+            ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    const occupantId = grid[x][y];
+                    
+                    if (occupantId !== 0) {
+                        const cycleColor = cycleIdToColorMap[occupantId];
+                        
+                        ctx.fillStyle = cycleColor + '40'; 
+                        ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            }
+
+            cycles.forEach((cycle) => {
+                if (cycle.isAlive) {
+                    const cycleColor = cycle.color;
+                    ctx.fillStyle = cycleColor;
+                    ctx.fillRect(cycle.x * CELL_SIZE, cycle.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(cycle.x * CELL_SIZE + CELL_SIZE/4, cycle.y * CELL_SIZE + CELL_SIZE/4, CELL_SIZE/2, CELL_SIZE/2);
+                    
+                    if (cycle.isHuman) {
+                        ctx.strokeStyle = '#FFFFFF';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(cycle.x * CELL_SIZE, cycle.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            });
+
+            explosions.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // --- MULTIPLAYER MOCK (Unchanged) ---
+
+        function connectToServer() {
+            console.log(`Multiplayer mode selected. Client is ready to connect.`);
+        }
+    </script>
+</body>
+</html>
